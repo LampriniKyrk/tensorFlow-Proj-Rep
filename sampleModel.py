@@ -1,5 +1,8 @@
 import cPickle, sys
 import numpy as np
+from sklearn.metrics import f1_score
+
+import VariousModels as mo
 from keras.preprocessing import image
 from keras import utils, optimizers, activations
 import matplotlib.pyplot as plt
@@ -8,6 +11,7 @@ from keras.models import Sequential
 from keras.layers.convolutional import Convolution2D
 from keras.layers.core import Flatten, Dense, Activation
 from sklearn import preprocessing
+import PIL
 
 #NOTES
 #32 pix images for 4 months data are 54900
@@ -125,43 +129,54 @@ def binary_step_func(predicted, threshold):
 
 
 #put all images to one big array- dynamic list? - read in batches?
-n_images = 109818#13726
-trainSize = 100000
-filename = 'dishwasher32/dish washer1_PAA_32_GADF'
+
+filename = 'fridge/fridge1_PAA_64_GADF'
 imageList = []
 labelList = []
 
-for img in range(0,n_images):
-    #------------UNPICKLE-------------#
-    f = open(filename+' '+str(img)+'.pkl', 'rb')
-    pickledFile = cPickle.load(f)
+n_images = 13726
+# for img in range(0,n_images):
+#     #------------UNPICKLE-------------#
+#     f = open(filename+' '+str(img)+'.pkl', 'rb')
+#     pickledFile = cPickle.load(f)
+#
+#     traintuple = pickledFile[0] #train eikonas
+#     testtuple = pickledFile[1] #test eikonas - empty
+#
+#     temp_X = traintuple[0]
+#     temp_Y = traintuple[1]
+#
+#     imageList.append(temp_X.flatten())
+#
+#     # labelList.append(np.reshape(temp_Y,temp_Y.size))
+#     averageLabel = np.average(temp_Y)
+#     if averageLabel>0.0062:
+#         averageLabel = 1
+#     else: averageLabel = 0
+#     labelList.append(averageLabel)
+#
+# # prepare data for conv input
+#
+# imageList = preprocessing.minmax_scale(imageList)#parseImgs(5000, 'img/fig-')
+# labelList = preprocessing.minmax_scale(labelList,(0,1))
+#
+# np.save('fridge64',imageList)
+# np.save('fridge64-labels',labelList)
 
-    traintuple = pickledFile[0] #train eikonas
-    testtuple = pickledFile[1] #test eikonas - empty
 
-    temp_X = traintuple[0]
-    temp_Y = traintuple[1]
 
-    imageList.append(temp_X.flatten())
+imageList = np.load('numpy-files/fridge64.npy')
+labelList = np.load('numpy-files/fridge64-labels.npy')
 
-    # labelList.append(np.reshape(temp_Y,temp_Y.size))
-    averageLabel = np.average(temp_Y)
-    # if averageLabel>0.015:
-    #     averageLabel = 1
-    # else: averageLabel = 0
-    labelList.append(averageLabel)
-
-#prepare data for conv input
-
-imageList = preprocessing.minmax_scale(imageList)
-labelList = preprocessing.minmax_scale(labelList,(0,1))
+#109818#13726
+trainSize = int(imageList.__len__()*0.75)
 
 #----------CONVOLUTIONAL NN--------------#
 # imgList = parseImgs(n_images,'img/fig-')
-data_shape = (32,32,1)
+data_shape = (64,64,1)
 
-train_X = np.reshape(imageList[:trainSize], (trainSize, 32,32,1))
-test_X = np.reshape(imageList[trainSize:], (n_images-trainSize, 32,32,1))
+train_X = np.reshape(imageList[:trainSize], (trainSize, 64,64,1))
+test_X = np.reshape(imageList[trainSize:], (n_images-trainSize, 64,64,1))
 
 train_Y = np.asarray(labelList[:trainSize])
 test_Y = np.asarray(labelList[trainSize:])
@@ -170,8 +185,8 @@ test_Y = np.asarray(labelList[trainSize:])
 y_train_binary = utils.to_categorical(train_Y)
 y_test_binary = utils.to_categorical(test_Y)
 
-model = cnnModel(data_shape,1)
-model.fit(train_X, train_Y, batch_size = 10, epochs= 1,
+model = mo.create_model_GRU(data_shape)    #cnnModel(data_shape,1)
+model.fit(train_X, train_Y, batch_size = 20, epochs= 1,
           verbose=1, validation_data=(test_X, test_Y), shuffle=True)
 
 #model = cnnBinaryModel(data_shape,1)
@@ -179,6 +194,8 @@ model.fit(train_X, train_Y, batch_size = 10, epochs= 1,
 # model.fit(train_X,y_train_binary,batch_size=10,epochs=1,validation_data=(test_X,y_test_binary))
 
 pred = model.predict(test_X,1)
+f1 = f1_score(test_Y, pred, average='macro')
+print(f1)
 #pred = binary_step_func(pred, 0.5)
 #pred = categorical_step_func(pred, 0.5)
 
@@ -200,7 +217,3 @@ plt.plot(test_Y.flatten(), label= 'Y')
 plt.show()
 #
 # #print pred, test_Y
-
-
-
-
