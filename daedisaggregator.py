@@ -10,11 +10,6 @@ import h5py
 import random
 import sys
 
-from keras.models import load_model
-from keras.models import Sequential
-from keras.layers import Dense, Flatten, Conv1D, Reshape, Dropout
-from keras.utils import plot_model
-
 from nilmtk.utils import find_nearest
 from nilmtk.feature_detectors import cluster
 from nilmtk.disaggregate import Disaggregator
@@ -64,7 +59,7 @@ class DAEDisaggregator(Disaggregator):
         main_power_series = mains.power_series(**load_kwargs)
         meter_power_series = meter.power_series(**load_kwargs)
 
-        # Train chunks
+        # construckt chunks
         run = True
         mainchunk = next(main_power_series)
         meterchunk = next(meter_power_series)
@@ -74,17 +69,18 @@ class DAEDisaggregator(Disaggregator):
         while(run):
             mainchunk = self._normalize(mainchunk, self.mmax)
             meterchunk = self._normalize(meterchunk, self.mmax)
+            print(10/self.mmax)
             filename = filename +str(counter)
 
-            self.train_on_chunk(mainchunk, meterchunk, epochs, batch_size,filename)
+            self.make_file_on_chunk(mainchunk, meterchunk, epochs, batch_size, filename, metername= 'meter'+str(counter))
             try:
                 mainchunk = next(main_power_series)
                 meterchunk = next(meter_power_series)
-                counter +=1
+                counter += 1
             except:
                 run = False
 
-    def train_on_chunk(self, mainchunk, meterchunk, epochs, batch_size, filename):
+    def make_file_on_chunk(self, mainchunk, meterchunk, epochs, batch_size, filename, metername):
         '''Train using only one chunk
 
         Parameters
@@ -114,7 +110,7 @@ class DAEDisaggregator(Disaggregator):
         Y_batch = np.reshape(Y_batch, (int(len(Y_batch) / s), s))
 
         #SAVE BATCH----
-        np.savetxt(filename,X_batch ,delimiter=" ")
+        np.savetxt(metername,X_batch ,delimiter=" ")
         np.savetxt(filename+"-labels", Y_batch, delimiter=" ")
 
         #self.model.fit(X_batch, Y_batch, batch_size=batch_size, epochs=epochs, shuffle=True)

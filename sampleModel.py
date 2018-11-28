@@ -206,10 +206,10 @@ print(f1)
 # plt.show()
 
 
-# f = file('results.txt','wb')
-# for i,j in zip(pred, y_test_binary):
-#     f.write(str(i)+' - '+str(j)+'\n')
-# f.close()
+f = file('results.txt','wb')
+for i,j in zip(pred, y_test_binary):
+    f.write(str(i)+' - '+str(j)+'\n')
+f.close()
 
 import matplotlib.pyplot as plt
 plt.plot(pred.flatten(), label = 'pred')
