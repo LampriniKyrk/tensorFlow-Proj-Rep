@@ -24,7 +24,7 @@ def getFeatures(num_of_imgs):
     # model.compile()
 
     vgg16_feature_list = []
-    img_path = 'b5/fig-'
+    img_path = 'redd-b6/fig-'
 
     for i in range(0, num_of_imgs):
         path = img_path + str(i) + '.png'
@@ -48,6 +48,27 @@ def saveFeatures(filename, farray):
 def readFeatures(filename):
     return np.load(filename)
 
+def make_data_for_redd(flist,vgg16list):
+    label_List = []
+    for n in flist:
+        f = open(n).readlines()
+        for line in f:
+            label = line.split(' ')
+            labelarr = np.asarray(label).astype(np.float)
+            labelavg = np.average(labelarr)
+            if (labelavg > 0.00270):
+                labelavg = 1
+            else:
+                labelavg = 0
+            label_List.append(labelavg)
+
+    vgg16Arr= []
+    for n in vgg16list:
+        vgg16Arr.append(readFeatures(n).flatten())
+
+    return (np.asarray(label_List), np.asarray(vgg16Arr))
+
+
 def create_multilable_y(filenameA, filenameB, thressholdA, thressholdB):
     fA = open(filenameA)
     fB = open(filenameB)
@@ -69,37 +90,42 @@ def create_multilable_y(filenameA, filenameB, thressholdA, thressholdB):
     return np.asarray(new_Y)
 
 
-f = open('data/washing machineb2-labels').readlines()
-# thresshold for fridge = 0.0062
-labelList = []
-for line in f:
-    label = line.split(' ')
-    labelarr = np.asarray(label).astype(np.float)
-    labelavg = np.average(labelarr)
-    if (labelavg > 0.0025):
-        labelavg = 1
-    else: labelavg = 0
-    labelList.append(labelavg)
-    # labelList.append(np.average(labelarr))
-
-labelList = np.asarray(labelList)
+# f = open('data/fridge1-b1-labels').readlines()
+# # thresshold for fridge = 0.0062
+# labelList = []
+# for line in f:
+#     label = line.split(' ')
+#     labelarr = np.asarray(label).astype(np.float)
+#     labelavg = np.average(labelarr)
+#     if (labelavg > 0.00270):
+#         labelavg = 1
+#     else: labelavg = 0
+#     labelList.append(labelavg)
+#     # labelList.append(np.average(labelarr))
+#
+# labelList = np.asarray(labelList)
 # train_Y = labelList[:78000]
 # test_Y = labelList[78000:82000]
 # print(test_Y.shape)
 
-# labelList = create_multilable_y('fridge1y-labels','microwave1y-labels', 0.0062, 0.025)
+labelList, vgg16_feature_array  = make_data_for_redd(['data/fridge1-b1-labels', 'data/fridge1-b2-labels',
+                                'data/fridge1-b3-labels', 'data/fridge1-b5-labels',
+                                'data/fridge1-b6-labels'],
+                               ['numpy-files/vgg16-redd-b1.npy', 'numpy-files/vgg16-redd-b2.npy',
+                                'numpy-files/vgg16-redd-b3.npy', 'numpy-files/vgg16-redd-b5.npy',
+                                'numpy-files/vgg16-redd-b6.npy'])
 print('completed reading labels')
-# print(labelList.shape)
+print(labelList.shape, vgg16_feature_array.shape)
 # labelList = labelList[:82000]
 num_of_imgs = labelList.__len__()
 
 # vgg16_feature_array = getFeatures(num_of_imgs)
-# saveFeatures('numpy-files/fridge-vgg16-b5', vgg16_feature_array)
-# print('save completed')
+# saveFeatures('numpy-files/vgg16-redd-b6.npy', vgg16_feature_array)
+print('save completed')
 
-vgg16_feature_array = readFeatures('numpy-files/vgg16-b2.npy')
-vgg16_feature_array = vgg16_feature_array[:labelList.__len__()]
-train_X, test_X, train_Y, test_Y = train_test_split(vgg16_feature_array, labelList, test_size=0.90, random_state=42)
+# vgg16_feature_array = readFeatures('numpy-files/vgg16-redd-b1.npy')
+# vgg16_feature_array = vgg16_feature_array[:labelList.__len__()]
+train_X, test_X, train_Y, test_Y = train_test_split(vgg16_feature_array, labelList, test_size=0.30, random_state=42)
 # print (test_X.shape)
 # train_X = vgg16_feature_array[:78000,:]
 # test_X = vgg16_feature_array[78000:,:]
@@ -125,13 +151,13 @@ clf = MLPClassifier(hidden_layer_sizes=50, batch_size=20)
 # cv = cross_val_score(model_tree, train_X, train_Y, cv=10)
 # print("Accuracy: %0.2f (+/- %0.2f)" % (cv.mean(), cv.std() * 2))
 #
-# clf.fit(train_X,train_Y)
+clf.fit(train_X,train_Y)
 # joblib.dump(clf, 'MLP50-whashingmachine-13-14.joblib')
-clf = joblib.load('MLP50-whashingmachine-13-14.joblib')
+# clf = joblib.load('MLP50-whashingmachine-13-14.joblib')
 pred = clf.predict(test_X)
-
-confMatrix = confusion_matrix(test_Y, pred)
-print("confusion matrix: ", confMatrix)
+#
+# confMatrix = confusion_matrix(test_Y, pred)
+# print("confusion matrix: ", confMatrix)
 
 #metrics
 ##CLASSIFICATION METRICS
