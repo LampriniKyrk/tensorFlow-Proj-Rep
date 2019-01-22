@@ -80,12 +80,12 @@ def get_multilable_y(filenameList, thressholdList):
 
 
 #~~~~~~~~~~~MAIN~~~~~~~~~~#
-fnList =['data/kettleb2-labels',
-         'data/fridgeb2-labels',
-         'data/dish washerb2-labels',
-         'data/microwaveb2-labels',
-         'data/washing machineb2-labels']
-thList = [0.0013, 0.0062, 0.00125, 0.025, 0.0025]
+fnList =['/home/nick/PycharmProjects/nanaproj/data/dish washer1-b1-labels',
+         '/home/nick/PycharmProjects/nanaproj/data/fridge1-b1-labels',
+         '/home/nick/PycharmProjects/nanaproj/data/microwave1-b1-labels',
+         '/home/nick/PycharmProjects/nanaproj/data/washing machine1-b1-labels',
+         ]
+thList = [0.00165, 0.00165, 0.00165, 0.00165]
 
 
 labelList = get_multilable_y(fnList,thList).T
@@ -99,17 +99,17 @@ num_of_imgs = labelList.__len__()
 # saveFeatures('numpy-files/fridge64-vgg16-82000-features', vgg16_feature_array)
 # print('save completed')
 
-vgg16_feature_array = readFeatures('numpy-files/vgg16-b2.npy')
+vgg16_feature_array = readFeatures('/home/nick/PycharmProjects/nanaproj/numpy-files/vgg16-redd-b1.npy')
 print vgg16_feature_array.shape
-train_X = vgg16_feature_array[:21000,:]
-train_Y = labelList[:21000,:]
-test_X = vgg16_feature_array[21000:30000,]
-test_Y = labelList[21000:,]
-# train_X, test_X, train_Y, test_Y = train_test_split(vgg16_feature_array[:30000,], labelList, test_size=0.30, random_state=42)
+# train_X = vgg16_feature_array[:21000,:]
+# train_Y = labelList[:21000,:]
+# test_X = vgg16_feature_array[21000:30000,]
+# test_Y = labelList[21000:,]
+train_X, test_X, train_Y, test_Y = train_test_split(vgg16_feature_array[:num_of_imgs], labelList, test_size=0.30, random_state=42)
 print (test_X.shape)
 
 # clf = OneVsRestClassifier(DecisionTreeClassifier())
-clf = MLPClassifier()
+clf = MLPClassifier(hidden_layer_sizes=500)
 # clf = RandomForestClassifier(n_estimators=1000)
 # clf = ExtraTreesClassifier(n_estimators=500)
 
@@ -121,13 +121,15 @@ pred = clf.predict(test_X)
 
 #metrics
 ##MULTILABLE CLASSIFICATION METRICS
-f1 = f1_score(test_Y, pred, average='micro')
+f1micro = f1_score(test_Y, pred, average='micro')
+f1macro = f1_score(test_Y, pred, average='macro')
 prec = label_ranking_average_precision_score(test_Y, pred)
 rank_loss = label_ranking_loss(test_Y, pred)
-for i in range(0,5):
-    print('label ',i,' f1: ', f1_score(test_Y[:,i], pred[:,i], average='micro'))
+# for i in range(0,5):
+#     print('label ',i,' f1-micro: ', f1_score(test_Y[:,i], pred[:,i], average='micro'))
 
-print('f1:',f1)
+print('f1 micro:',f1micro)
+print('f1 macro:',f1macro)
 print('prec: ',prec)
 print('ranking loss: ',rank_loss)
 

@@ -24,7 +24,7 @@ def getFeatures(num_of_imgs):
     # model.compile()
 
     vgg16_feature_list = []
-    img_path = 'redd-b6/fig-'
+    img_path = 'b1-16-17/fig-'
 
     for i in range(0, num_of_imgs):
         path = img_path + str(i) + '.png'
@@ -63,8 +63,12 @@ def make_data_for_redd(flist,vgg16list):
             label_List.append(labelavg)
 
     vgg16Arr= []
+    # vgg16Arr.extend(vgg16list)
+
     for n in vgg16list:
-        vgg16Arr.append(readFeatures(n).flatten())
+        tmp = readFeatures(n)
+        for i in range(0,tmp.__len__()):
+            vgg16Arr.append(tmp[i])
 
     return (np.asarray(label_List), np.asarray(vgg16Arr))
 
@@ -89,99 +93,172 @@ def create_multilable_y(filenameA, filenameB, thressholdA, thressholdB):
         new_Y.append([avg1, avg2])
     return np.asarray(new_Y)
 
+def runTrainRedd(device):
+    # REDD READING
+    labelList, vgg16_feature_array  = make_data_for_redd(['data/'+device+'1-b1-labels', 'data/'+device+'1-b2-labels',
+                                    'data/'+device+'1-b3-labels', 'data/'+device+'1-b4-labels',
+                                    'data/'+device+'1-b5-labels', 'data/'+device+'1-b6-labels'],
+                                   ['numpy-files/vgg16-redd-b1.npy', 'numpy-files/vgg16-redd-b2.npy',
+                                    'numpy-files/vgg16-redd-b3.npy', 'numpy-files/vgg16-redd-b4.npy',
+                                    'numpy-files/vgg16-redd-b5.npy','numpy-files/vgg16-redd-b6.npy'])
+    num_of_imgs = labelList.__len__()
 
-# f = open('data/fridge1-b1-labels').readlines()
-# # thresshold for fridge = 0.0062
-# labelList = []
-# for line in f:
-#     label = line.split(' ')
-#     labelarr = np.asarray(label).astype(np.float)
-#     labelavg = np.average(labelarr)
-#     if (labelavg > 0.00270):
-#         labelavg = 1
-#     else: labelavg = 0
-#     labelList.append(labelavg)
-#     # labelList.append(np.average(labelarr))
-#
-# labelList = np.asarray(labelList)
-# train_Y = labelList[:78000]
-# test_Y = labelList[78000:82000]
-# print(test_Y.shape)
+    train_X, test_X, train_Y, test_Y = train_test_split(vgg16_feature_array[:num_of_imgs], labelList, test_size=0.30,
+                                                        random_state=42)
 
-labelList, vgg16_feature_array  = make_data_for_redd(['data/fridge1-b1-labels', 'data/fridge1-b2-labels',
-                                'data/fridge1-b3-labels', 'data/fridge1-b5-labels',
-                                'data/fridge1-b6-labels'],
-                               ['numpy-files/vgg16-redd-b1.npy', 'numpy-files/vgg16-redd-b2.npy',
-                                'numpy-files/vgg16-redd-b3.npy', 'numpy-files/vgg16-redd-b5.npy',
-                                'numpy-files/vgg16-redd-b6.npy'])
-print('completed reading labels')
-print(labelList.shape, vgg16_feature_array.shape)
-# labelList = labelList[:82000]
-num_of_imgs = labelList.__len__()
+    # ##### Uncomment classifier of choice #####
 
-# vgg16_feature_array = getFeatures(num_of_imgs)
-# saveFeatures('numpy-files/vgg16-redd-b6.npy', vgg16_feature_array)
-print('save completed')
+    # clf = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2),n_estimators=500, learning_rate=0.25)
 
-# vgg16_feature_array = readFeatures('numpy-files/vgg16-redd-b1.npy')
-# vgg16_feature_array = vgg16_feature_array[:labelList.__len__()]
-train_X, test_X, train_Y, test_Y = train_test_split(vgg16_feature_array, labelList, test_size=0.30, random_state=42)
-# print (test_X.shape)
-# train_X = vgg16_feature_array[:78000,:]
-# test_X = vgg16_feature_array[78000:,:]
+    # clf = AdaBoostClassifier(n_estimators=1000, learning_rate=0.25)
 
-# clf = AdaBoostRegressor(DecisionTreeRegressor(), n_estimators=5, learning_rate=0.5)
+    # clf = AdaBoostClassifier(RandomForestClassifier(random_state=0.7), n_estimators=1000, learning_rate=0.5)
 
-# clf = RandomForestRegressor(n_estimators=10)
+    clf = DecisionTreeClassifier(max_depth=15)
 
-# clf = MLPRegressor(hidden_layer_sizes=20, activation='tanh')
+    # clf = RandomForestClassifier(n_estimators=1000, random_state=7)
 
-# clf = AdaBoostClassifier(DecisionTreeClassifier(max_depth=4),n_estimators=1000, learning_rate=0.25)
+    # clf = MLPClassifier(hidden_layer_sizes=500, batch_size=20)
 
-# clf = AdaBoostClassifier(n_estimators=1000, learning_rate=0.25)
+    # Train classifier
+    clf.fit(train_X,train_Y)
 
-# clf = AdaBoostClassifier(RandomForestClassifier(random_state=0.7), n_estimators=500, learning_rate=0.5)
+    # Save classifier for future use
+    joblib.dump(clf, 'Tree'+'-'+device+'-redd-all.joblib')
 
-# clf = DecisionTreeClassifier(max_depth=15)
+    # Predict test data
+    pred = clf.predict(test_X)
 
-# clf = RandomForestClassifier(n_estimators=1000)
+    # Print metrics
+    printmetrics(test_Y,pred)
 
-clf = MLPClassifier(hidden_layer_sizes=50, batch_size=20)
-
-# cv = cross_val_score(model_tree, train_X, train_Y, cv=10)
-# print("Accuracy: %0.2f (+/- %0.2f)" % (cv.mean(), cv.std() * 2))
-#
-clf.fit(train_X,train_Y)
-# joblib.dump(clf, 'MLP50-whashingmachine-13-14.joblib')
-# clf = joblib.load('MLP50-whashingmachine-13-14.joblib')
-pred = clf.predict(test_X)
-#
-# confMatrix = confusion_matrix(test_Y, pred)
-# print("confusion matrix: ", confMatrix)
-
-#metrics
-##CLASSIFICATION METRICS
-
-f1 = f1_score(test_Y, pred, average='macro')
-acc = accuracy_score(test_Y,pred)
-rec = recall_score(test_Y,pred)
-prec = precision_score(test_Y,pred)
-print('f1:',f1)
-print('acc: ',acc)
-print('recall: ',rec)
-print('precision: ',prec)
+    return
 
 
+def printmetrics(test, predicted):
+    ##CLASSIFICATION METRICS
 
-# ##REGRESSION METRICS
-# mae = mean_absolute_error(test_Y,pred)
-# print('mae: ',mae)
-# E_pred = sum(pred)
-# E_ground = sum(test_Y)
-# rete = abs(E_pred-E_ground)/float(max(E_ground,E_pred))
-# print('relative error total energy: ',rete)
-#
-import matplotlib.pyplot as plt
-plt.plot(pred.flatten(), label = 'pred')
-plt.plot(test_Y.flatten(), label= 'Y')
-plt.show()
+    f1m = f1_score(test, predicted, average='macro')
+    f1 = f1_score(test, predicted)
+    acc = accuracy_score(test, predicted)
+    rec = recall_score(test, predicted)
+    prec = precision_score(test, predicted)
+
+    # print('f1:',f1)
+    # print('acc: ',acc)
+    # print('recall: ',rec)
+    # print('precision: ',prec)
+
+    # # to copy paste print
+    print("=== For docs: {:.4}\t{:.4}\t{:.4}\t{:.4}\t{:.4}".format(rec, prec, acc, f1m, f1))
+
+    # ##REGRESSION METRICS
+    # mae = mean_absolute_error(test_Y,pred)
+    # print('mae: ',mae)
+    # E_pred = sum(pred)
+    # E_ground = sum(test_Y)
+    # rete = abs(E_pred-E_ground)/float(max(E_ground,E_pred))
+    # print('relative error total energy: ',rete)
+    return
+
+
+def plot_predicted_and_ground_truth(test, predicted):
+    import matplotlib.pyplot as plt
+    plt.plot(predicted.flatten(), label = 'pred')
+    plt.plot(test.flatten(), label= 'Y')
+    plt.show()
+    return
+
+
+def runTrainUkdale(device, house):
+    # Read data labels
+    h = house.split('-')
+    print h[0]
+    if h[0] == '1':
+        f = open('data/'+device+h[1]+'-'+h[2]+'-labels').readlines()
+    else:
+        f = open('data/' + device + '1-1-labels').readlines()
+
+    # Read thresholds
+    thres = float(readThreshold(device, house))
+
+
+    labelList = []
+    for line in f:
+        label = line.split(' ')
+        labelarr = np.asarray(label).astype(np.float)
+        labelavg = np.average(labelarr)
+        if (labelavg > thres):
+            labelavg = 1
+        else:
+            labelavg = 0
+        labelList.append(labelavg)
+
+    labelList = np.asarray(labelList)
+
+    # UKDALE READING
+
+    print('completed reading labels')
+
+    num_of_imgs = labelList.__len__()
+
+    # Uncomment below if needed to create own vgg16 feautures :
+    # ---------------------------------------------------------
+    # vgg16_feature_array = getFeatures(num_of_imgs-1)
+    # saveFeatures('numpy-files/vgg16-b1-16-17.npy', vgg16_feature_array)
+    # print('save completed')
+    # ---------------------------------------------------------
+
+    vgg16_feature_array = readFeatures('/home/nick/PycharmProjects/nanaproj/numpy-files/vgg16-b1-16-17.npy')
+    # vgg16_feature_array = vgg16_feature_array[:labelList.__len__()]
+    train_X, test_X, train_Y, test_Y = train_test_split(vgg16_feature_array[:num_of_imgs], labelList[:num_of_imgs-1], test_size=0.99,
+                                                        random_state=42)
+
+    # clf = AdaBoostRegressor(DecisionTreeRegressor(), n_estimators=5, learning_rate=0.5)
+
+    # clf = RandomForestRegressor(n_estimators=10, random_state=7)
+
+    # clf = MLPRegressor(hidden_layer_sizes=20, activation='tanh')
+
+    # clf = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2),n_estimators=500, learning_rate=0.25)
+
+    # clf = AdaBoostClassifier(n_estimators=1000, learning_rate=0.25)
+
+    # clf = AdaBoostClassifier(RandomForestClassifier(random_state=0.7), n_estimators=1000, learning_rate=0.5)
+
+    # clf = DecisionTreeClassifier(max_depth=15)
+
+    # clf = RandomForestClassifier(n_estimators=1000, random_state=7)
+
+    # clf = MLPClassifier(hidden_layer_sizes=500, batch_size=20)
+
+    # cv = cross_val_score(model_tree, train_X, train_Y, cv=10)
+    # print("Accuracy: %0.2f (+/- %0.2f)" % (cv.mean(), cv.std() * 2))
+    #
+    # clf.fit(train_X,train_Y)
+    # joblib.dump(clf, 'MLP5-dishwasher-redd-all.joblib')
+    clf = joblib.load('/media/nick/Ext hard dr/NILM nana/models/AdaTree1000-washingmachine-13-14-b1.joblib')
+    pred = clf.predict(test_X)
+    # #
+    # # confMatrix = confusion_matrix(test_Y, pred)
+    # # print("confusion matrix: ", confMatrix)
+    #
+    # # metrics
+    printmetrics(test_Y, pred)
+    #
+    plot_predicted_and_ground_truth(test_Y, pred)
+    return
+
+
+def readThreshold(device, house):
+    threshold = 0
+    f = open('thresholds-'+device+'.txt').readlines()
+    for line in f:
+        splittedline = line.split(',')
+        if splittedline[0] == house:
+            threshold = splittedline[1]
+    return threshold
+
+
+runTrainUkdale('washing machine', '1-16-17')
+
